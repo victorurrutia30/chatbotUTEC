@@ -41,6 +41,9 @@ namespace ChatbotUTEC.Dialogs
 
                 switch (intent)
                 {
+                    case "Saludo":
+                        response = "¡Hola! 👋 Soy el bot de UTEC. ¿En qué puedo ayudarte hoy? Puedes pedirme tu horario, trámites, parciales o docentes.";
+                        break;
                     case "ConsultarHorario":
                         string carnet = ExtractEntity(prediction.Entities, "Carnet");
                         var horarios = _db.GetHorariosPorCarnet(carnet);

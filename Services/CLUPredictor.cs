@@ -5,7 +5,8 @@ using Azure;
 using Azure.AI.Language.Conversations;
 using Azure.Core;
 using Microsoft.Extensions.Configuration;
-using Newtonsoft.Json;   // ← Asegúrate de tenerlo
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 
 namespace ChatbotUTEC.Services
 {
@@ -50,40 +51,49 @@ namespace ChatbotUTEC.Services
                 kind = "Conversation"
             };
 
-            // 2) Serializo y loggeo lo que voy a enviar
+            // 2) Serializo y loggeo
             var payloadJson = JsonConvert.SerializeObject(data, Formatting.Indented);
-            Console.WriteLine("➡️  [CLU REQUEST] URL: "
-                + _client.Endpoint
-                + "/language/:analyze-conversations?api-version=2022-10-01-preview");
+            Console.WriteLine(
+                "➡️  [CLU REQUEST] URL: " +
+                _client.Endpoint +
+                "/language/:analyze-conversations?api-version=2024-11-15-preview"
+            );
             Console.WriteLine("➡️  [CLU PAYLOAD]\n" + payloadJson);
 
-            // 3) Llamada al servicio
+            // 3) Llamada al servicio (overload sin opciones extras)
             var response = await _client.AnalyzeConversationAsync(RequestContent.Create(data));
 
             // 4) Leo y muestro la respuesta cruda
             var rawJson = response.Content.ToString();
             Console.WriteLine("⬅️  [CLU RESPONSE]\n" + rawJson);
 
-            // 5) Deserializo y devuelvo el objeto
-            dynamic result = JsonConvert.DeserializeObject(rawJson);
-            // DESPUÉS: recorremos el array de intents para extraer la confianza
-            string topIntent = result.result.prediction.topIntent;
+            // 5) Parseo con JObject para manejar nulls y distintos nombres de campo
+            var root = JObject.Parse(rawJson);
+            var pred = root["result"]?["prediction"]
+                       ?? throw new InvalidOperationException("La respuesta no contiene prediction");
+
+            var topIntent = pred["topIntent"]?.Value<string>() ?? "";
             double confidence = 0.0;
 
-            foreach (var intentObj in result.result.prediction.intents)
+            foreach (var intent in (pred["intents"] as JArray) ?? new JArray())
             {
-                if ((string)intentObj.category == topIntent)
+                if (intent["category"]?.Value<string>() == topIntent)
                 {
-                    confidence = (double)intentObj.confidence;
+                    confidence =
+                        intent["confidenceScore"]?.Value<double>()
+                        ?? intent["confidence"]?.Value<double>()
+                        ?? 0.0;
                     break;
                 }
             }
+
+            var entities = pred["entities"] ?? new JArray();
 
             return new ConversationPrediction
             {
                 Intent = topIntent,
                 Confidence = confidence,
-                Entities = result.result.prediction.entities
+                Entities = entities
             };
         }
     }
