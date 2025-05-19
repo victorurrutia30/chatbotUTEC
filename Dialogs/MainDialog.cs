@@ -1,12 +1,12 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Bot.Builder;
 using Microsoft.Bot.Schema;
-using ChatbotUTEC.Services;
-using System.Linq;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json.Linq;
+using ChatbotUTEC.Services;
 
 namespace ChatbotUTEC.Dialogs
 {
@@ -23,14 +23,18 @@ namespace ChatbotUTEC.Dialogs
             _logger = logger;
         }
 
-        protected override async Task OnMessageActivityAsync(ITurnContext<IMessageActivity> turnContext, CancellationToken cancellationToken)
+        protected override async Task OnMessageActivityAsync(
+            ITurnContext<IMessageActivity> turnContext,
+            CancellationToken cancellationToken)
         {
+            var tStart = DateTime.UtcNow;
             var userMessage = turnContext.Activity.Text;
+            ConversationPrediction prediction = null;
             string response;
 
             try
             {
-                var prediction = await _clu.GetPredictionAsync(userMessage);
+                prediction = await _clu.GetPredictionAsync(userMessage);
                 _logger.LogInformation(
                     "🧠 Intent detectado: {Intent}, Confianza: {Confidence}",
                     prediction.Intent,
@@ -46,7 +50,7 @@ namespace ChatbotUTEC.Dialogs
                     case "ConsultarHorario":
                         var carnet = ExtractEntity(prediction.Entities, "Carnet");
                         var horarios = _db.GetHorariosPorCarnet(carnet);
-                        response = horarios.Count > 0
+                        response = horarios.Any()
                             ? string.Join("\n", horarios)
                             : "No se encontraron horarios.";
                         break;
@@ -54,7 +58,7 @@ namespace ChatbotUTEC.Dialogs
                     case "ConsultarTramite":
                         var carnetTramite = ExtractEntity(prediction.Entities, "Carnet");
                         var tramites = _db.GetTramites(carnetTramite);
-                        response = tramites.Count > 0
+                        response = tramites.Any()
                             ? string.Join("\n", tramites)
                             : "No se encontraron trámites.";
                         break;
@@ -62,7 +66,7 @@ namespace ChatbotUTEC.Dialogs
                     case "ConsultarParcial":
                         var materia = ExtractEntity(prediction.Entities, "NombreMateria");
                         var parciales = _db.GetHorarioParcial(materia);
-                        response = parciales.Count > 0
+                        response = parciales.Any()
                             ? string.Join("\n", parciales)
                             : "No se encontraron parciales.";
                         break;
@@ -70,7 +74,7 @@ namespace ChatbotUTEC.Dialogs
                     case "ConsultarDocente":
                         var facultad = ExtractEntity(prediction.Entities, "NombreFacultad");
                         var docentes = _db.GetDocentesPorFacultad(facultad);
-                        response = docentes.Count > 0
+                        response = docentes.Any()
                             ? string.Join("\n", docentes)
                             : "No se encontraron docentes.";
                         break;
@@ -80,13 +84,31 @@ namespace ChatbotUTEC.Dialogs
                         break;
                 }
             }
-            catch (System.Exception ex)
+            catch (Exception ex)
             {
                 _logger.LogError(ex, "❌ Error en CLU o base de datos");
                 response = "Ocurrió un error al procesar tu solicitud.";
             }
 
+            // Envío de la respuesta al usuario
             await turnContext.SendActivityAsync(MessageFactory.Text(response), cancellationToken);
+
+            // Registro de la interacción en la base de datos
+            var responseTimeMs = (int)(DateTime.UtcNow - tStart).TotalMilliseconds;
+            try
+            {
+                _db.InsertarInteraccion(
+                    turnContext.Activity.From.Id,
+                    userMessage,
+                    prediction?.Intent ?? "None",
+                    prediction?.Entities?.ToString() ?? "[]",
+                    responseTimeMs
+                );
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "❌ Error al registrar la interacción en la base de datos");
+            }
         }
 
         private string ExtractEntity(JArray entities, string entityName)

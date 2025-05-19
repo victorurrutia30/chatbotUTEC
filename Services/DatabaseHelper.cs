@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Data;
 using System.Data.SqlClient;
 using Microsoft.Extensions.Configuration;
 
@@ -107,6 +108,47 @@ namespace ChatbotUTEC.Services
             }
 
             return resultados;
+        }
+
+        /// <summary>
+        /// Inserta en la tabla Interaccion los datos de cada consulta/respuesta del bot.
+        /// </summary>
+        public void InsertarInteraccion(
+            string usuarioId,
+            string queryText,
+            string intent,
+            string entitiesJson,
+            int responseTimeMs)
+        {
+            using var conn = new SqlConnection(_connectionString);
+            conn.Open();
+
+            using var cmd = new SqlCommand("sp_InsertarInteraccion", conn)
+            {
+                CommandType = CommandType.StoredProcedure
+            };
+            cmd.Parameters.AddWithValue("@UsuarioId", usuarioId);
+            cmd.Parameters.AddWithValue("@QueryText", queryText);
+            cmd.Parameters.AddWithValue("@Intent", intent);
+            cmd.Parameters.AddWithValue("@Entities", entitiesJson);
+            cmd.Parameters.AddWithValue("@ResponseTimeMs", responseTimeMs);
+
+            cmd.ExecuteNonQuery();
+        }
+
+        /// <summary>
+        /// Ejecuta cualquier consulta SQL y devuelve un DataTable.
+        /// </summary>
+        public DataTable EjecutarConsultaATabla(string sql)
+        {
+            var dt = new DataTable();
+            using var conn = new SqlConnection(_connectionString);
+            conn.Open();
+
+            using var cmd = new SqlCommand(sql, conn);
+            using var da = new SqlDataAdapter(cmd);
+            da.Fill(dt);
+            return dt;
         }
     }
 }
