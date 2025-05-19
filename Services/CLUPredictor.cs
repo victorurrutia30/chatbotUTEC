@@ -1,9 +1,11 @@
-﻿using System;
+﻿// ChatbotUTEC/Services/CLUPredictor.cs
+using System;
 using System.Threading.Tasks;
 using Azure;
 using Azure.AI.Language.Conversations;
 using Azure.Core;
 using Microsoft.Extensions.Configuration;
+using Newtonsoft.Json;   // ← Asegúrate de tenerlo
 
 namespace ChatbotUTEC.Services
 {
@@ -25,30 +27,62 @@ namespace ChatbotUTEC.Services
 
         public async Task<ConversationPrediction> GetPredictionAsync(string message)
         {
-            var input = new
+            // 1) Construyo el payload
+            var data = new
             {
-                conversationItem = new
+                analysisInput = new
                 {
-                    text = message,
-                    id = "1",
-                    participantId = "1"
+                    conversationItem = new
+                    {
+                        participantId = "1",
+                        id = "1",
+                        modality = "text",
+                        language = "es",
+                        text = message
+                    }
                 },
                 parameters = new
                 {
                     projectName = _projectName,
                     deploymentName = _deploymentName,
-                    verbose = true
+                    stringIndexType = "TextElement_V8"
                 },
                 kind = "Conversation"
             };
 
-            var response = await _client.AnalyzeConversationAsync(RequestContent.Create(input));
-            var result = response.Content.ToDynamicFromJson();
+            // 2) Serializo y loggeo lo que voy a enviar
+            var payloadJson = JsonConvert.SerializeObject(data, Formatting.Indented);
+            Console.WriteLine("➡️  [CLU REQUEST] URL: "
+                + _client.Endpoint
+                + "/language/:analyze-conversations?api-version=2022-10-01-preview");
+            Console.WriteLine("➡️  [CLU PAYLOAD]\n" + payloadJson);
+
+            // 3) Llamada al servicio
+            var response = await _client.AnalyzeConversationAsync(RequestContent.Create(data));
+
+            // 4) Leo y muestro la respuesta cruda
+            var rawJson = response.Content.ToString();
+            Console.WriteLine("⬅️  [CLU RESPONSE]\n" + rawJson);
+
+            // 5) Deserializo y devuelvo el objeto
+            dynamic result = JsonConvert.DeserializeObject(rawJson);
+            // DESPUÉS: recorremos el array de intents para extraer la confianza
+            string topIntent = result.result.prediction.topIntent;
+            double confidence = 0.0;
+
+            foreach (var intentObj in result.result.prediction.intents)
+            {
+                if ((string)intentObj.category == topIntent)
+                {
+                    confidence = (double)intentObj.confidence;
+                    break;
+                }
+            }
 
             return new ConversationPrediction
             {
-                Intent = result.result.prediction.topIntent,
-                Confidence = result.result.prediction.intents[0].confidence,
+                Intent = topIntent,
+                Confidence = confidence,
                 Entities = result.result.prediction.entities
             };
         }
