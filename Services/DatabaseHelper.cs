@@ -205,31 +205,7 @@ namespace ChatbotUTEC.Services
             return resultados;
         }
 
-        public List<string> GetAuditoriaInteracciones()
-        {
-            var resultados = new List<string>();
-            using var conn = new SqlConnection(_connectionString);
-            conn.Open();
 
-            var query = @"
-        SELECT AuditoriaId, InteraccionId, Operacion, Fecha
-        FROM AuditoriaInteraccion
-        ORDER BY Fecha DESC";
-
-            using var cmd = new SqlCommand(query, conn);
-            using var reader = cmd.ExecuteReader();
-            while (reader.Read())
-            {
-                int id = Convert.ToInt32(reader["AuditoriaId"]);
-                int interaccionId = Convert.ToInt32(reader["InteraccionId"]);
-                string operacion = reader["Operacion"].ToString();
-                DateTime fecha = Convert.ToDateTime(reader["Fecha"]);
-
-                resultados.Add($"🔍 Auditoría #{id}: Operación {operacion} sobre Interacción #{interaccionId} en {fecha:dd/MM/yyyy HH:mm}");
-            }
-
-            return resultados;
-        }
 
 
         /// <summary>

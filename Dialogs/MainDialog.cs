@@ -103,12 +103,7 @@ namespace ChatbotUTEC.Dialogs
                             ? string.Join("\n", pagos)
                             : "No se encontraron pagos registrados para ese carnet.";
                         break;
-                    case "ConsultarAuditoria":
-                        var auditoria = _db.GetAuditoriaInteracciones();
-                        response = auditoria.Any()
-                            ? string.Join("\n", auditoria)
-                            : "No se encontraron registros en la auditoría.";
-                        break;
+                    
                 }
             }
             catch (Exception ex)
