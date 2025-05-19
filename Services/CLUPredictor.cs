@@ -22,7 +22,6 @@ namespace ChatbotUTEC.Services
             var key = new AzureKeyCredential(configuration["LanguageUnderstanding:EndpointKey"]);
             _projectName = configuration["LanguageUnderstanding:ProjectName"];
             _deploymentName = configuration["LanguageUnderstanding:DeploymentName"];
-
             _client = new ConversationAnalysisClient(endpoint, key);
         }
 
@@ -53,41 +52,39 @@ namespace ChatbotUTEC.Services
 
             // 2) Serializo y loggeo
             var payloadJson = JsonConvert.SerializeObject(data, Formatting.Indented);
-            Console.WriteLine(
-                "➡️  [CLU REQUEST] URL: " +
-                _client.Endpoint +
-                "/language/:analyze-conversations?api-version=2024-11-15-preview"
-            );
+            Console.WriteLine("➡️  [CLU REQUEST] URL: "
+                + _client.Endpoint
+                + "/language/:analyze-conversations?api-version=2024-11-15-preview");
             Console.WriteLine("➡️  [CLU PAYLOAD]\n" + payloadJson);
 
-            // 3) Llamada al servicio (overload sin opciones extras)
+            // 3) Llamada al servicio
             var response = await _client.AnalyzeConversationAsync(RequestContent.Create(data));
 
             // 4) Leo y muestro la respuesta cruda
             var rawJson = response.Content.ToString();
             Console.WriteLine("⬅️  [CLU RESPONSE]\n" + rawJson);
 
-            // 5) Parseo con JObject para manejar nulls y distintos nombres de campo
+            // 5) Parseo con JObject
             var root = JObject.Parse(rawJson);
-            var pred = root["result"]?["prediction"]
-                       ?? throw new InvalidOperationException("La respuesta no contiene prediction");
+            var predNode = root["result"]?["prediction"]
+                           ?? throw new InvalidOperationException("La respuesta no contiene prediction");
 
-            var topIntent = pred["topIntent"]?.Value<string>() ?? "";
+            // Top intent y confianza
+            var topIntent = predNode["topIntent"]?.Value<string>() ?? "";
             double confidence = 0.0;
-
-            foreach (var intent in (pred["intents"] as JArray) ?? new JArray())
+            foreach (var intent in predNode["intents"].Children())
             {
                 if (intent["category"]?.Value<string>() == topIntent)
                 {
-                    confidence =
-                        intent["confidenceScore"]?.Value<double>()
-                        ?? intent["confidence"]?.Value<double>()
-                        ?? 0.0;
+                    confidence = intent["confidenceScore"]?.Value<double>()
+                              ?? intent["confidence"]?.Value<double>()
+                              ?? 0.0;
                     break;
                 }
             }
 
-            var entities = pred["entities"] ?? new JArray();
+            // Entidades como JArray
+            var entities = predNode["entities"] as JArray;
 
             return new ConversationPrediction
             {
@@ -102,6 +99,6 @@ namespace ChatbotUTEC.Services
     {
         public string Intent { get; set; }
         public double Confidence { get; set; }
-        public dynamic Entities { get; set; }
+        public JArray Entities { get; set; }
     }
 }

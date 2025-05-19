@@ -4,9 +4,9 @@ using System.Threading.Tasks;
 using Microsoft.Bot.Builder;
 using Microsoft.Bot.Schema;
 using ChatbotUTEC.Services;
-using System;
 using System.Linq;
 using Microsoft.Extensions.Logging;
+using Newtonsoft.Json.Linq;
 
 namespace ChatbotUTEC.Dialogs
 {
@@ -31,45 +31,56 @@ namespace ChatbotUTEC.Dialogs
             try
             {
                 var prediction = await _clu.GetPredictionAsync(userMessage);
-                var intent = prediction.Intent;
                 _logger.LogInformation(
-    "🧠 Intent detectado: {Intent}, Confianza: {Confidence}",
-    prediction.Intent,
-    prediction.Confidence
-);
+                    "🧠 Intent detectado: {Intent}, Confianza: {Confidence}",
+                    prediction.Intent,
+                    prediction.Confidence
+                );
 
-
-                switch (intent)
+                switch (prediction.Intent)
                 {
                     case "Saludo":
                         response = "¡Hola! 👋 Soy el bot de UTEC. ¿En qué puedo ayudarte hoy? Puedes pedirme tu horario, trámites, parciales o docentes.";
                         break;
+
                     case "ConsultarHorario":
-                        string carnet = ExtractEntity(prediction.Entities, "Carnet");
+                        var carnet = ExtractEntity(prediction.Entities, "Carnet");
                         var horarios = _db.GetHorariosPorCarnet(carnet);
-                        response = horarios.Count > 0 ? string.Join("\n", horarios) : "No se encontraron horarios.";
+                        response = horarios.Count > 0
+                            ? string.Join("\n", horarios)
+                            : "No se encontraron horarios.";
                         break;
+
                     case "ConsultarTramite":
-                        string carnetTramite = ExtractEntity(prediction.Entities, "Carnet");
+                        var carnetTramite = ExtractEntity(prediction.Entities, "Carnet");
                         var tramites = _db.GetTramites(carnetTramite);
-                        response = tramites.Count > 0 ? string.Join("\n", tramites) : "No se encontraron trámites.";
+                        response = tramites.Count > 0
+                            ? string.Join("\n", tramites)
+                            : "No se encontraron trámites.";
                         break;
+
                     case "ConsultarParcial":
-                        string materia = ExtractEntity(prediction.Entities, "NombreMateria");
+                        var materia = ExtractEntity(prediction.Entities, "NombreMateria");
                         var parciales = _db.GetHorarioParcial(materia);
-                        response = parciales.Count > 0 ? string.Join("\n", parciales) : "No se encontraron parciales.";
+                        response = parciales.Count > 0
+                            ? string.Join("\n", parciales)
+                            : "No se encontraron parciales.";
                         break;
+
                     case "ConsultarDocente":
-                        string facultad = ExtractEntity(prediction.Entities, "NombreFacultad");
+                        var facultad = ExtractEntity(prediction.Entities, "NombreFacultad");
                         var docentes = _db.GetDocentesPorFacultad(facultad);
-                        response = docentes.Count > 0 ? string.Join("\n", docentes) : "No se encontraron docentes.";
+                        response = docentes.Count > 0
+                            ? string.Join("\n", docentes)
+                            : "No se encontraron docentes.";
                         break;
+
                     default:
                         response = "Lo siento, no entendí tu solicitud. ¿Puedes reformularla?";
                         break;
                 }
             }
-            catch (Exception ex)
+            catch (System.Exception ex)
             {
                 _logger.LogError(ex, "❌ Error en CLU o base de datos");
                 response = "Ocurrió un error al procesar tu solicitud.";
@@ -78,22 +89,16 @@ namespace ChatbotUTEC.Dialogs
             await turnContext.SendActivityAsync(MessageFactory.Text(response), cancellationToken);
         }
 
-        private string ExtractEntity(dynamic entities, string entityName)
+        private string ExtractEntity(JArray entities, string entityName)
         {
-            try
+            if (entities == null) return "";
+
+            foreach (var entity in entities.Children<JObject>())
             {
-                if (entities != null && entities.ContainsKey(entityName))
+                if (entity["category"]?.Value<string>() == entityName)
                 {
-                    var entity = entities[entityName];
-                    if (entity is IEnumerable<dynamic> list && list.Any())
-                    {
-                        return list.First().text?.ToString() ?? "";
-                    }
+                    return entity["text"]?.Value<string>() ?? "";
                 }
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"❌ Error extrayendo entidad '{entityName}': {ex.Message}");
             }
 
             return "";
