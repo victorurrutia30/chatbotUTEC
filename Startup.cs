@@ -8,6 +8,7 @@ using Microsoft.Bot.Connector.Authentication;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using static iText.Kernel.Pdf.Colorspace.PdfSpecialCs;
 
 namespace EchoBot
 {
@@ -29,6 +30,8 @@ namespace EchoBot
             services.AddSingleton<DatabaseHelper>();
             services.AddSingleton<ReportService>();      // <-- Registro de ReportService
             services.AddTransient<IBot, MainDialog>();
+            services.AddHttpClient();
+            services.AddControllersWithViews();
         }
 
         public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
@@ -39,8 +42,17 @@ namespace EchoBot
                .UseStaticFiles()
                .UseWebSockets()
                .UseRouting()
-               .UseAuthorization()
-               .UseEndpoints(endpoints => endpoints.MapControllers());
+               .UseAuthorization();
+
+            app.UseEndpoints(endpoints =>
+    {
+                       // Ruta por defecto a AdminController.Index
+                endpoints.MapControllerRoute(
+                name: "default",
+                pattern: "{controller=Admin}/{action=Index}/{id?}");
+                       // tus endpoints API (ReportsController, BotController…)
+                endpoints.MapControllers();
+                    });
         }
     }
 }

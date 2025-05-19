@@ -1,0 +1,68 @@
+﻿@{
+    ViewData["Title"] = "Panel Admin — Reportes";
+}
+
+<h1>@ViewData["Title"]</h1>
+<p>Descarga cualquiera de los reportes:</p>
+
+<table class="table">
+    <thead>
+        <tr>
+            <th>Reporte</th>
+            <th>Excel</th>
+            <th>PDF</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr>
+            <td>1) Preguntas más frecuentes</td>
+            <td><a class="btn btn-sm btn-primary" href="/api/reports/frecuentes/excel">Excel</a></td>
+            <td><a class="btn btn-sm btn-danger" href="/api/reports/frecuentes/pdf">PDF</a></td>
+        </tr>
+        <tr>
+            <td>2) Tiempo promedio de respuesta</td>
+            <td><a class="btn btn-sm btn-primary" href="/api/reports/tiempo-respuesta/excel">Excel</a></td>
+            <td><a class="btn btn-sm btn-danger" href="/api/reports/tiempo-respuesta/pdf">PDF</a></td>
+        </tr>
+        <tr>
+            <td>3) Distribución de intents</td>
+            <td><a class="btn btn-sm btn-primary" href="/api/reports/intents/excel">Excel</a></td>
+            <td><a class="btn btn-sm btn-danger" href="/api/reports/intents/pdf">PDF</a></td>
+        </tr>
+        <tr>
+            <td>4) Entidades más usadas</td>
+            <td><a class="btn btn-sm btn-primary" href="/api/reports/entidades/excel">Excel</a></td>
+            <td><a class="btn btn-sm btn-danger" href="/api/reports/entidades/pdf">PDF</a></td>
+        </tr>
+        <tr>
+            <td>5) Interacciones por día</td>
+            <td><a class="btn btn-sm btn-primary" href="/api/reports/interacciones-dia/excel">Excel</a></td>
+            <td><a class="btn btn-sm btn-danger" href="/api/reports/interacciones-dia/pdf">PDF</a></td>
+        </tr>
+        <tr>
+            <td>6) Sesiones de usuario</td>
+            <td><a class="btn btn-sm btn-primary" href="/api/reports/sesiones-usuario/excel">Excel</a></td>
+            <td><a class="btn btn-sm btn-danger" href="/api/reports/sesiones-usuario/pdf">PDF</a></td>
+        </tr>
+        <tr>
+            <td>7) Promedio por intent</td>
+            <td><a class="btn btn-sm btn-primary" href="/api/reports/promedio-intent/excel">Excel</a></td>
+            <td><a class="btn btn-sm btn-danger" href="/api/reports/promedio-intent/pdf">PDF</a></td>
+        </tr>
+        <tr>
+            <td>8) Interacciones por hora</td>
+            <td><a class="btn btn-sm btn-primary" href="/api/reports/interacciones-hora/excel">Excel</a></td>
+            <td><a class="btn btn-sm btn-danger" href="/api/reports/interacciones-hora/pdf">PDF</a></td>
+        </tr>
+        <tr>
+            <td>9) Usuario más activo por día</td>
+            <td><a class="btn btn-sm btn-primary" href="/api/reports/usuario-mas-activo/excel">Excel</a></td>
+            <td><a class="btn btn-sm btn-danger" href="/api/reports/usuario-mas-activo/pdf">PDF</a></td>
+        </tr>
+        <tr>
+            <td>10) Usuarios activos</td>
+            <td><a class="btn btn-sm btn-primary" href="/api/reports/usuarios-activos/excel">Excel</a></td>
+            <td><a class="btn btn-sm btn-danger" href="/api/reports/usuarios-activos/pdf">PDF</a></td>
+        </tr>
+    </tbody>
+</table>

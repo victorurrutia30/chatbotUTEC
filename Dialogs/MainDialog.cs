@@ -78,9 +78,36 @@ namespace ChatbotUTEC.Dialogs
                             ? string.Join("\n", docentes)
                             : "No se encontraron docentes.";
                         break;
+                    case "ConsultarDiferido":
+                        var materiaDif = ExtractEntity(prediction.Entities, "NombreMateria");
+                        var diferidos = _db.GetHorariosDiferidos(materiaDif);
+                        response = diferidos.Any()
+                            ? string.Join("\n", diferidos)
+                            : "No se encontraron exámenes diferidos para esa materia.";
+                        break;
 
                     default:
                         response = "Lo siento, no entendí tu solicitud. ¿Puedes reformularla?";
+                        break;
+                    case "ConsultarInscripcion":
+                        var carnetInscripcion = ExtractEntity(prediction.Entities, "Carnet");
+                        var materias = _db.GetMateriasInscritas(carnetInscripcion);
+                        response = materias.Any()
+                            ? string.Join("\n", materias)
+                            : "No se encontraron materias inscritas para ese carnet.";
+                        break;
+                    case "ConsultarPago":
+                        var carnetPago = ExtractEntity(prediction.Entities, "Carnet");
+                        var pagos = _db.GetPagosPorCarnet(carnetPago);
+                        response = pagos.Any()
+                            ? string.Join("\n", pagos)
+                            : "No se encontraron pagos registrados para ese carnet.";
+                        break;
+                    case "ConsultarAuditoria":
+                        var auditoria = _db.GetAuditoriaInteracciones();
+                        response = auditoria.Any()
+                            ? string.Join("\n", auditoria)
+                            : "No se encontraron registros en la auditoría.";
                         break;
                 }
             }

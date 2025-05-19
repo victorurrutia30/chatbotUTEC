@@ -50,16 +50,25 @@ namespace ChatbotUTEC.Services
                 SELECT HP.Diainicio, HP.Diafin, HP.HoraInicio, HP.HoraFin 
                 FROM Horarioparciales HP 
                 JOIN Materia M ON HP.CodigoMateriaID = M.CodigoMateriaID 
-                WHERE M.Nombre LIKE @Materia";
+                WHERE LTRIM(RTRIM(M.Nombre)) = @Materia";
 
             using var cmd = new SqlCommand(query, conn);
-            cmd.Parameters.AddWithValue("@Materia", $"%{materia}%");
+            cmd.Parameters.AddWithValue("@Materia", materia.Trim());
+
 
             using var reader = cmd.ExecuteReader();
             while (reader.Read())
             {
-                var info = $"Parcial: del {reader["Diainicio"]} al {reader["Diafin"]}, de {reader["HoraInicio"]} a {reader["HoraFin"]}";
-                resultados.Add(info);
+                DateTime inicio = Convert.ToDateTime(reader["Diainicio"]);
+                DateTime fin = Convert.ToDateTime(reader["Diafin"]);
+                TimeSpan horaInicio = (TimeSpan)reader["HoraInicio"];
+                TimeSpan horaFin = (TimeSpan)reader["HoraFin"];
+
+                string linea = $"📘 Parcial de {materia}\n" +
+                               $"🗓️ Del {inicio:dd} al {fin:dd 'de' MMMM 'de' yyyy}\n" +
+                               $"🕒 Horario: {horaInicio:hh\\:mm} a {horaFin:hh\\:mm}";
+
+                resultados.Add(linea);
             }
 
             return resultados;
@@ -109,6 +118,119 @@ namespace ChatbotUTEC.Services
 
             return resultados;
         }
+
+        public List<string> GetHorariosDiferidos(string materia)
+        {
+            var resultados = new List<string>();
+            using var conn = new SqlConnection(_connectionString);
+            conn.Open();
+
+            var query = @"
+        SELECT HD.Diainicio, HD.Diafin, HD.HoraInicio, HD.HoraFin, HD.Aula
+        FROM Horariodiferidos HD
+        JOIN Materia M ON HD.CodigoMateriaID = M.CodigoMateriaID
+        WHERE LTRIM(RTRIM(M.Nombre)) = @Materia";
+
+            using var cmd = new SqlCommand(query, conn);
+            cmd.Parameters.AddWithValue("@Materia", materia.Trim());
+
+            using var reader = cmd.ExecuteReader();
+            while (reader.Read())
+            {
+                DateTime inicio = Convert.ToDateTime(reader["Diainicio"]);
+                DateTime fin = Convert.ToDateTime(reader["Diafin"]);
+                TimeSpan horaInicio = (TimeSpan)reader["HoraInicio"];
+                TimeSpan horaFin = (TimeSpan)reader["HoraFin"];
+                string aula = reader["Aula"].ToString();
+
+                string info = $"📘 Diferido de {materia}\n" +
+                              $"🗓️ Del {inicio:dd} al {fin:dd 'de' MMMM 'de' yyyy}\n" +
+                              $"🕒 Horario: {horaInicio:hh\\:mm} a {horaFin:hh\\:mm} en aula {aula}";
+                resultados.Add(info);
+            }
+
+            return resultados;
+        }
+
+        public List<string> GetMateriasInscritas(string carnet)
+        {
+            var resultados = new List<string>();
+            using var conn = new SqlConnection(_connectionString);
+            conn.Open();
+
+            var query = @"
+        SELECT M.Nombre, I.FechaInscripcion
+        FROM Inscripcion I
+        JOIN Materia M ON I.CodigoMateriaID = M.CodigoMateriaID
+        WHERE I.CarnetID = @Carnet";
+
+            using var cmd = new SqlCommand(query, conn);
+            cmd.Parameters.AddWithValue("@Carnet", carnet);
+
+            using var reader = cmd.ExecuteReader();
+            while (reader.Read())
+            {
+                var nombre = reader["Nombre"].ToString();
+                var fecha = Convert.ToDateTime(reader["FechaInscripcion"]);
+                resultados.Add($"📚 {nombre} (Inscrito el {fecha:dd/MM/yyyy})");
+            }
+
+            return resultados;
+        }
+
+        public List<string> GetPagosPorCarnet(string carnet)
+        {
+            var resultados = new List<string>();
+            using var conn = new SqlConnection(_connectionString);
+            conn.Open();
+
+            var query = @"
+        SELECT Monto, FechaPago, Metodo
+        FROM Pago
+        WHERE CarnetID = @Carnet";
+
+            using var cmd = new SqlCommand(query, conn);
+            cmd.Parameters.AddWithValue("@Carnet", carnet);
+
+            using var reader = cmd.ExecuteReader();
+            while (reader.Read())
+            {
+                decimal monto = Convert.ToDecimal(reader["Monto"]);
+                DateTime fecha = Convert.ToDateTime(reader["FechaPago"]);
+                string metodo = reader["Metodo"].ToString();
+
+                resultados.Add($"💰 Pago de ${monto} el {fecha:dd/MM/yyyy} vía {metodo}");
+            }
+
+            return resultados;
+        }
+
+        public List<string> GetAuditoriaInteracciones()
+        {
+            var resultados = new List<string>();
+            using var conn = new SqlConnection(_connectionString);
+            conn.Open();
+
+            var query = @"
+        SELECT AuditoriaId, InteraccionId, Operacion, Fecha
+        FROM AuditoriaInteraccion
+        ORDER BY Fecha DESC";
+
+            using var cmd = new SqlCommand(query, conn);
+            using var reader = cmd.ExecuteReader();
+            while (reader.Read())
+            {
+                int id = Convert.ToInt32(reader["AuditoriaId"]);
+                int interaccionId = Convert.ToInt32(reader["InteraccionId"]);
+                string operacion = reader["Operacion"].ToString();
+                DateTime fecha = Convert.ToDateTime(reader["Fecha"]);
+
+                resultados.Add($"🔍 Auditoría #{id}: Operación {operacion} sobre Interacción #{interaccionId} en {fecha:dd/MM/yyyy HH:mm}");
+            }
+
+            return resultados;
+        }
+
 
         /// <summary>
         /// Inserta en la tabla Interaccion los datos de cada consulta/respuesta del bot.
