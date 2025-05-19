@@ -1,0 +1,27 @@
+﻿@{
+    ViewData["Title"] = "Chat con el Bot UTEC";
+}
+
+<h2>@ViewData["Title"]</h2>
+
+<!-- Contenedor del WebChat -->
+<div id="webchat" role="main" style="height: 500px; width: 100%; border: 1px solid #ccc;"></div>
+
+<!-- Script de Web Chat desde CDN -->
+<script src="https://cdn.botframework.com/botframework-webchat/latest/webchat.js"></script>
+
+<script>
+    // Token de DirectLine local solo en desarrollo
+    const directLine = window.WebChat.createDirectLine({
+        secret: undefined,
+        token: undefined,
+        domain: 'http://localhost:3978/api/messages'
+    });
+
+    window.WebChat.renderWebChat({
+        directLine: directLine,
+        userID: 'usuario-123',
+        username: 'Estudiante',
+        locale: 'es-ES'
+    }, document.getElementById('webchat'));
+</script>
